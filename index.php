@@ -2,19 +2,24 @@
 
 require 'src/Hexer.php';
 require 'src/DeHexer.php';
+require 'src/Result.php';
 
-$submittedMessage = false;
-$submittedImage = false;
+$state = false;
 $data = false;
 $message = "";
 $decoded = "";
 
-if (!empty($_FILES)) {
-    $decoded = DeHexer::parseImage($_FILES['file']['tmp_name']);
-    $submittedImage = true;
+if (!empty($_FILES['file'])) {
+    $file = $_FILES['file']['tmp_name'];
+    if (exif_imagetype($file) === IMAGETYPE_PNG) {
+        $decoded = DeHexer::parseImage($file);
+        $state = Result::SubmittedImage;
+    } else {
+        $state = Result::ErrorWrongFileType;
+    }
 }
 
-if (!empty($_POST)) {
+if (!empty($_POST['message'])) {
     $message = htmlspecialchars($_POST['message']);
     $image = Hexer::CreateImage($message);
 
@@ -26,7 +31,7 @@ if (!empty($_POST)) {
     $contents = ob_get_contents();
     ob_end_clean();
     $data = base64_encode($contents);
-    $submittedMessage = true;
+    $state = Result::SubmittedMessage;
 }
 ?>
 
@@ -39,7 +44,63 @@ if (!empty($_POST)) {
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Message Hexer</title>
     <style>
-        .result,input[type=file]{display:block}button,hr{border:none}body{font-size:20px;line-height:1.5;font-family:"Lucida Sans Typewriter","Lucida Console",monaco,"Bitstream Vera Sans Mono",monospace}hr{padding:0;border-top:medium double #333;color:#333;text-align:center;height:0}h1,h2,p{margin:0}.container{max-width:960px;margin:0 auto;padding:24px}.form-area{margin-top:48px}.result{height:inherit;image-rendering:pixelated;width:100%}textarea{height:80px;width:100%;max-width:100%}button{width:80px;padding:12px;margin-top:12px}
+        .result, input[type=file] {
+            display: block
+        }
+
+        .error {
+            color: rgb(192, 57, 43)
+        }
+
+        button, hr {
+            border: none
+        }
+
+        body {
+            font-size: 20px;
+            line-height: 1.5;
+            font-family: "Lucida Sans Typewriter", "Lucida Console", monaco, "Bitstream Vera Sans Mono", monospace
+        }
+
+        hr {
+            padding: 0;
+            border-top: medium double #333;
+            color: #333;
+            text-align: center;
+            height: 0
+        }
+
+        h1, h2, p {
+            margin: 0
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 24px
+        }
+
+        .form-area {
+            margin-top: 48px
+        }
+
+        .result {
+            height: inherit;
+            image-rendering: pixelated;
+            width: 100%
+        }
+
+        textarea {
+            height: 80px;
+            width: 100%;
+            max-width: 100%
+        }
+
+        button {
+            width: 80px;
+            padding: 12px;
+            margin-top: 12px
+        }
     </style>
 </head>
 <body>
@@ -47,13 +108,16 @@ if (!empty($_POST)) {
         <h1>Message Hexer</h1>
         <p>Encode & Decode Messages with Hexadecimals</p>
         <hr>
-        <?php if ($submittedMessage): ?>
+        <?php if ($state == Result::SubmittedMessage): ?>
             <h2>Encoded Message:</h2>
             <img src="data:image/png;base64,<?= $data; ?>" alt="message" class="result"/>
             <small><strong>Original Text:</strong><?= $message; ?></small>
-        <?php elseif ($submittedImage): ?>
+        <?php elseif ($state === Result::SubmittedImage): ?>
             <h2>Decoded Message:</h2>
             <p><?= $decoded; ?></p>
+        <?php elseif ($state === Result::ErrorWrongFileType): ?>
+            <h2>Error:</h2>
+            <p class="error">Please submit a .png image</p>
         <?php endif; ?>
         <div class="form-area">
             <form method="post">
@@ -64,7 +128,7 @@ if (!empty($_POST)) {
             </form>
             <form method="post" enctype="multipart/form-data">
                 <h2>Decode an Image:</h2>
-                <label for="file"> Image to Decode: </label>
+                <label for="file"> Image to Decode: (must be .png)</label>
                 <input type="file" id="file" name="file" required>
                 <button type="submit"> Decode</button>
             </form>
