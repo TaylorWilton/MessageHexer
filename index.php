@@ -16,7 +16,11 @@ if (!empty($_FILES['file']) && !empty($_POST['decodeChannel'])) {
         $decoded = DeHexer::parseImage($file, $channel);
         $state = Result::SubmittedImage;
     } else {
-        $state = Result::ErrorWrongFileType;
+        if (Channel::isValidChannel($channel)) {
+            $state = Result::ErrorInvalidFileType;
+        } else {
+            $state = Result::ErrorInvalidColorChannel;
+        }
     }
 }
 
@@ -24,21 +28,21 @@ if (!empty($_POST['message']) && !empty($_POST['encodeChannel'])) {
     $message = htmlspecialchars($_POST['message']);
     $channel = $_POST['encodeChannel'];
 
-    if (!Channel::isValidChannel($channel)) {
-        throw new TypeError("Not a valid Color Channel");
+    if (Channel::isValidChannel($channel)) {
+        $image = Hexer::CreateImage($message, $channel);
+
+        /*
+        Save image to buffer, rather than to disk
+        */
+        ob_start();
+        imagepng($image);
+        $contents = ob_get_contents();
+        ob_end_clean();
+        $data = base64_encode($contents);
+        $state = Result::SubmittedMessage;
+    } else {
+        $state = Result::ErrorInvalidColorChannel;
     }
-
-    $image = Hexer::CreateImage($message, $channel);
-
-    /*
-    Save image to buffer, rather than to disk
-    */
-    ob_start();
-    imagepng($image);
-    $contents = ob_get_contents();
-    ob_end_clean();
-    $data = base64_encode($contents);
-    $state = Result::SubmittedMessage;
 }
 ?>
 
@@ -122,9 +126,12 @@ if (!empty($_POST['message']) && !empty($_POST['encodeChannel'])) {
         <?php elseif ($state === Result::SubmittedImage): ?>
             <h2>Decoded Message:</h2>
             <p><?= $decoded; ?></p>
-        <?php elseif ($state === Result::ErrorWrongFileType): ?>
+        <?php elseif ($state === Result::ErrorInvalidFileType): ?>
             <h2>Error:</h2>
             <p class="error">Please submit a .png image</p>
+        <?php elseif ($state === Result::ErrorInvalidColorChannel): ?>
+            <h2>Error:</h2>
+            <p class="error">Please use one of the colour channels specified below:</p>
         <?php endif; ?>
         <div class="form-area">
             <form method="post">

@@ -10,7 +10,8 @@ abstract class Result
 {
     const SubmittedImage = 0;
     const SubmittedMessage = 1;
-    const ErrorWrongFileType = 2;
+    const ErrorInvalidFileType = 2;
+    const ErrorInvalidColorChannel = 3;
 }
 
 abstract class Channel
@@ -23,10 +24,10 @@ abstract class Channel
     static function isValidChannel(string $name): bool
     {
         switch ($name) {
-            case $name = self::RED:
-            case $name = self::BLUE:
-            case $name = self:: GREEN:
-            case $name = self::ALL:
+            case $name === self::RED:
+            case $name === self::BLUE:
+            case $name === self::GREEN:
+            case $name === self::ALL:
                 return true;
             default:
                 return false;
