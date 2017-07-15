@@ -2,26 +2,33 @@
 
 require 'src/Hexer.php';
 require 'src/DeHexer.php';
-require 'src/Result.php';
+require 'src/Enums.php';
 
 $state = false;
 $data = false;
 $message = "";
 $decoded = "";
 
-if (!empty($_FILES['file'])) {
+if (!empty($_FILES['file']) && !empty($_POST['decodeChannel'])) {
     $file = $_FILES['file']['tmp_name'];
-    if (exif_imagetype($file) === IMAGETYPE_PNG) {
-        $decoded = DeHexer::parseImage($file);
+    $channel = $_POST['decodeChannel'];
+    if (exif_imagetype($file) === IMAGETYPE_PNG && Channel::isValidChannel($channel)) {
+        $decoded = DeHexer::parseImage($file, $channel);
         $state = Result::SubmittedImage;
     } else {
         $state = Result::ErrorWrongFileType;
     }
 }
 
-if (!empty($_POST['message'])) {
+if (!empty($_POST['message']) && !empty($_POST['encodeChannel'])) {
     $message = htmlspecialchars($_POST['message']);
-    $image = Hexer::CreateImage($message);
+    $channel = $_POST['encodeChannel'];
+
+    if (!Channel::isValidChannel($channel)) {
+        throw new TypeError("Not a valid Color Channel");
+    }
+
+    $image = Hexer::CreateImage($message, $channel);
 
     /*
     Save image to buffer, rather than to disk
@@ -124,12 +131,34 @@ if (!empty($_POST['message'])) {
                 <h2>Encode a Message:</h2>
                 <label for="message"> Message:</label>
                 <textarea id="message" name="message" required></textarea>
+                <fieldset>
+                    <legend>Color Channel</legend>
+                    <input value="red" id="radioEncodeRed" name="encodeChannel" type="radio"><label
+                            for="radioEncodeRed">Red</label>
+                    <input value="green" id="radioEncodeGreen" name="encodeChannel" type="radio"><label
+                            for="radioEncodeGreen">Green</label>
+                    <input value="blue" id="radioEncodeBlue" name="encodeChannel" type="radio"><label
+                            for="radioEncodeBlue">Blue</label>
+                    <input value="all" id="radioEncodeAll" name="encodeChannel" type="radio" checked><label
+                            for="radioEncodeAll">All</label>
+                </fieldset>
                 <button type="submit"> Encode</button>
             </form>
             <form method="post" enctype="multipart/form-data">
                 <h2>Decode an Image:</h2>
                 <label for="file"> Image to Decode: (must be .png)</label>
                 <input type="file" id="file" name="file" required>
+                <fieldset>
+                    <legend>Color Channel</legend>
+                    <input value="red" id="radioDecodeRed" name="decodeChannel" type="radio"><label
+                            for="radioDecodeRed">Red</label>
+                    <input value="green" id="radioDecodeGreen" name="decodeChannel" type="radio"><label
+                            for="radioDecodeGreen">Green</label>
+                    <input value="blue" id="radioDecodeBlue" name="decodeChannel" type="radio"><label
+                            for="radioDecodeBlue">Blue</label>
+                    <input value="all" id="radioDecodeAll" name="decodeChannel" type="radio" checked><label
+                            for="radioDecodeAll">All</label>
+                </fieldset>
                 <button type="submit"> Decode</button>
             </form>
         </div>

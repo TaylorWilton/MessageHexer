@@ -2,7 +2,7 @@
 
 class DeHexer
 {
-    static public function parseImage($filename)
+    static public function parseImage(string $filename, string $channel): string
     {
         $image = imagecreatefrompng($filename);
         $width = imagesx($image);
@@ -12,7 +12,11 @@ class DeHexer
         for ($x = 0; $x < $width; $x++) {
             for ($y = 0; $y < $height; $y++) {
                 $color = imagecolorat($image, $x, $y);
-                $pixels[] = $color;
+                if ($channel === Channel::ALL) {
+                    $pixels[] = $color;
+                } else {
+                    $pixels[] = self::extractChannel($color, $channel);
+                }
             }
         }
 
@@ -21,6 +25,24 @@ class DeHexer
             return hex2bin($dec);
         }, $pixels);
 
-        return implode("",$message);
+        return implode("", $message);
+    }
+
+    static private function extractChannel($rgb, $channel)
+    {
+        $r = ($rgb >> 16) & 0xFF;
+        $g = ($rgb >> 8) & 0xFF;
+        $b = $rgb & 0xFF;
+
+        switch ($channel) {
+            case $channel === Channel::RED:
+                return $r;
+            case $channel === Channel::GREEN:
+                return $g;
+            case $channel === Channel::BLUE:
+                return $b;
+            default:
+                throw new InvalidArgumentException("Not a valid channel");
+        }
     }
 }
